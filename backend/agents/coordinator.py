@@ -7,8 +7,14 @@ from dotenv import load_dotenv
 
 from services.database_service import save_emergency
 
-dotenv_path = Path(__file__).resolve().parent.parent / ".env"
+from agents.router import route_emergency
+from agents.location_agent import extract_location
+from agents.ambulance_agent import ambulance_agent
+from agents.police_agent import police_agent
+from agents.fire_agent import fire_agent
+from agents.hospital_agent import hospital_agent
 
+dotenv_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(dotenv_path=dotenv_path, override=True)
 
 api_key = os.getenv("GROQ_API_KEY")
@@ -32,20 +38,21 @@ Emergency:
 Return ONLY valid JSON.
 
 {{
-    "priority":"",
-    "confidence":0,
-    "emergency_type":"",
-    "summary":"",
-    "ambulance_required":false,
-    "hospital_department":[],
-    "first_aid":[],
-    "recommended_action":"",
-    "estimated_response_time":"",
-    "reason":""
+    "priority": "",
+    "confidence": 0,
+    "emergency_type": "",
+    "summary": "",
+    "ambulance_required": false,
+    "hospital_department": [],
+    "first_aid": [],
+    "recommended_action": "",
+    "estimated_response_time": "",
+    "reason": ""
 }}
 """
 
     try:
+
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
@@ -66,6 +73,35 @@ Return ONLY valid JSON.
 
         result = json.loads(text)
 
+        location = extract_location(emergency)
+        result["location"] = location
+
+        routing = route_emergency(emergency)
+        result["routing"] = routing
+
+        print("Running specialized agents...")
+
+        agents_result = {}
+
+        required_agents = routing.get("agents", [])
+
+        if "ambulance" in required_agents:
+            agents_result["ambulance"] = ambulance_agent(emergency)
+
+        if "police" in required_agents:
+            agents_result["police"] = police_agent(emergency)
+
+        if "fire" in required_agents:
+            agents_result["fire"] = fire_agent(emergency)
+
+        if "hospital" in required_agents:
+            agents_result["hospital"] = hospital_agent(
+                emergency,
+                location["city"]
+            )
+
+        result["agents"] = agents_result
+
         print("Saving to database...")
 
         save_emergency(result)
@@ -76,4 +112,6 @@ Return ONLY valid JSON.
 
     except Exception as e:
         print("Error:", e)
-        return {"error": str(e)}
+        return {
+            "error": str(e)
+        }

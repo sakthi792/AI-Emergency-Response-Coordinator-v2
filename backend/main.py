@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from services.database_service import get_all_emergencies
 from routes.emergency import router as emergency_router
 
 from database.database import engine, Base
@@ -26,5 +27,9 @@ def home():
     return {
         "message": "AI Emergency Response Coordinator"
     }
+
+@app.get("/history")
+def history():
+    return get_all_emergencies()
 
 app.include_router(emergency_router)

@@ -1,63 +1,45 @@
-import os
-import json
-from pathlib import Path
-from groq import Groq
-from dotenv import load_dotenv
-
-dotenv_path = Path(__file__).resolve().parent.parent / ".env"
-
-print("Using .env:", dotenv_path)
-print("Exists:", dotenv_path.exists())
-
-load_dotenv(dotenv_path=dotenv_path, override=True)
-
-print("Groq Key:", os.getenv("GROQ_API_KEY"))
-
-client = Groq(
-    api_key=os.getenv("GROQ_API_KEY")
-)
+from database.hospitals import HOSPITALS
 
 
-def recommend_hospital(emergency: str):
+def hospital_agent(emergency: str, city: str = "Unknown"):
 
-    prompt = f"""
-You are an Emergency Hospital Recommendation AI.
+    emergency = emergency.lower()
 
-Emergency:
-{emergency}
+    department = "Emergency"
 
-Recommend the MOST SUITABLE hospital.
+    if any(word in emergency for word in ["accident", "trauma", "bleeding", "injury"]):
+        department = "Trauma Care"
 
-Return ONLY valid JSON.
+    elif any(word in emergency for word in ["burn", "fire"]):
+        department = "Burn Care"
 
-{{
-    "hospital_name":"",
-    "department":"",
-    "reason":"",
-    "priority":""
-}}
-"""
+    elif any(word in emergency for word in ["heart", "chest", "cardiac"]):
+        department = "Cardiology"
 
-    try:
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            temperature=0.2
-        )
+    selected = None
 
-        text = response.choices[0].message.content.strip()
+    for hospital in HOSPITALS:
+        if (
+            hospital["city"].lower() == city.lower()
+            and hospital["department"].lower() == department.lower()
+        ):
+            selected = hospital
+            break
 
-        if text.startswith("```json"):
-            text = text.replace("```json", "").replace("```", "").strip()
-        elif text.startswith("```"):
-            text = text.replace("```", "").strip()
+    if selected is None:
+        for hospital in HOSPITALS:
+            if hospital["department"].lower() == department.lower():
+                selected = hospital
+                break
 
-        return json.loads(text)
+    if selected is None:
+        selected = HOSPITALS[0]
 
-    except Exception as e:
-        return {"error": str(e)}
+    return {
+        "hospital_name": selected["name"],
+        "city": selected["city"],
+        "department": selected["department"],
+        "phone": selected["phone"],
+        "reason": f"Recommended for {department} in {selected['city']}",
+        "priority": "High"
+    }

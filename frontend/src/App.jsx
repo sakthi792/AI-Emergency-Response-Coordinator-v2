@@ -1,187 +1,269 @@
-import { useState, useEffect } from "react";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Legend
+} from "recharts";
+
+import { useEffect, useState } from "react";
 import "./App.css";
 
-function App() {
+export default function App() {
   const [emergency, setEmergency] = useState("");
   const [result, setResult] = useState(null);
   const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
 
-  const loadHistory = async () => {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/history");
-      const data = await response.json();
-      setHistory(data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  const total = history.length;
+
+  const high = history.filter(
+    (e) => e.priority?.toLowerCase() === "high"
+  ).length;
+
+  const medium = history.filter(
+    (e) => e.priority?.toLowerCase() === "medium"
+  ).length;
+
+  const low = history.filter(
+    (e) => e.priority?.toLowerCase() === "low"
+  ).length;
+
+  const priorityData = [
+    { name: "High", value: high },
+    { name: "Medium", value: medium },
+    { name: "Low", value: low }
+  ];
+
+  const typeData = {};
+
+  history.forEach((item) => {
+    typeData[item.emergency_type] =
+      (typeData[item.emergency_type] || 0) + 1;
+  });
+
+  const emergencyTypeData = Object.keys(typeData).map((key) => ({
+    name: key,
+    value: typeData[key]
+  }));
+
+const filteredHistory = history.filter((item) =>
+  item.emergency_type.toLowerCase().includes(search.toLowerCase()) ||
+  item.priority.toLowerCase().includes(search.toLowerCase()) ||
+  item.summary.toLowerCase().includes(search.toLowerCase())
+);
+
+const COLORS = [
+  "#ef4444",
+  "#f59e0b",
+  "#10b981",
+  "#3b82f6",
+  "#8b5cf6",
+  "#ec4899"
+];
+
+  async function loadHistory() {
+    const response = await fetch("http://127.0.0.1:8000/history");
+    const data = await response.json();
+    setHistory(data);
+  }
+
+  async function analyze() {
+    const response = await fetch(
+      `http://127.0.0.1:8000/analyze?emergency=${encodeURIComponent(emergency)}`
+    );
+
+    const data = await response.json();
+
+    setResult(data);
+
+    loadHistory();
+  }
 
   useEffect(() => {
     loadHistory();
   }, []);
 
-  const analyzeEmergency = async () => {
-    if (!emergency.trim()) {
-      alert("Please enter an emergency.");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const response = await fetch(
-        `http://127.0.0.1:8000/analyze?emergency=${encodeURIComponent(emergency)}`
-      );
-
-      const data = await response.json();
-
-      setResult(data);
-
-      loadHistory();
-    } catch (error) {
-      console.error(error);
-
-      setResult({
-        error: "Failed to connect to backend.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="container">
-      <div className="card">
-        <h1>
-          🚨 AI Emergency
-          <br />
-          Response Coordinator
-        </h1>
+      <h1>🚨 AI Emergency Response Coordinator</h1>
 
-        <textarea
-          rows="6"
-          value={emergency}
-          onChange={(e) => setEmergency(e.target.value)}
-          placeholder="Describe the emergency..."
-          className="textarea"
-        />
+      <textarea
+        rows="5"
+        value={emergency}
+        onChange={(e) => setEmergency(e.target.value)}
+        placeholder="Describe the emergency..."
+      />
 
-        <button
-          onClick={analyzeEmergency}
-          className="button"
-          disabled={loading}
-        >
-          {loading ? "⏳ Analyzing Emergency..." : "🚨 Analyze Emergency"}
-        </button>
+      <button onClick={analyze}>Analyze Emergency</button>
 
-        {result && result.error && (
-          <div className="result-card">
-            <h2>❌ Error</h2>
-            <p>{result.error}</p>
+      <div className="stats">
+        <div className="stat-card">
+          <h3>Total</h3>
+          <h2>{total}</h2>
+        </div>
+
+        <div className="stat-card">
+          <h3>High</h3>
+          <h2>{high}</h2>
+        </div>
+
+        <div className="stat-card">
+          <h3>Medium</h3>
+          <h2>{medium}</h2>
+        </div>
+
+        <div className="stat-card">
+          <h3>Low</h3>
+          <h2>{low}</h2>
+        </div>
+      </div>
+
+      {result && (
+        <div className="card">
+          <h2>Emergency Report</h2>
+
+          <div className="grid">
+            <div className="info-box">
+              <h3>Priority</h3>
+              <p>{result.priority}</p>
+            </div>
+
+            <div className="info-box">
+              <h3>Emergency</h3>
+              <p>{result.emergency_type}</p>
+            </div>
+
+            <div className="info-box">
+              <h3>Location</h3>
+              <p>{result.location.city}</p>
+            </div>
+
+            <div className="info-box">
+              <h3>Confidence</h3>
+              <p>{result.confidence}%</p>
+            </div>
+
+            <div className="info-box">
+              <h3>Response Time</h3>
+              <p>{result.estimated_response_time}</p>
+            </div>
           </div>
-        )}
 
-        {result && !result.error && (
-          <div className="result-card">
-            <h2>🚨 Emergency Analysis</h2>
+          <h2 style={{ marginTop: "30px" }}>Emergency Services</h2>
 
-            <div className="info-row">
-              <strong>Priority</strong>
-              <span>{result.priority}</span>
-            </div>
+          <div className="services">
+            {result.agents.ambulance && (
+              <div className="service-card">
+                <h3>🚑 Ambulance</h3>
+                <p>{result.agents.ambulance.status}</p>
+              </div>
+            )}
 
-            <div className="info-row">
-              <strong>Confidence</strong>
-              <span>{result.confidence}</span>
-            </div>
+            {result.agents.police && (
+              <div className="service-card">
+                <h3>🚓 Police</h3>
+                <p>{result.agents.police.status}</p>
+              </div>
+            )}
 
-            <div className="info-row">
-              <strong>Emergency Type</strong>
-              <span>{result.emergency_type}</span>
-            </div>
+            {result.agents.fire && (
+              <div className="service-card">
+                <h3>🚒 Fire</h3>
+                <p>{result.agents.fire.status}</p>
+              </div>
+            )}
 
-            <div className="info-row">
-              <strong>Summary</strong>
-              <span>{result.summary}</span>
-            </div>
+            {result.agents.hospital && (
+              <div className="service-card">
+                <h3>🏥 Hospital</h3>
 
-            <div className="info-row">
-              <strong>Ambulance</strong>
-              <span>
-                {result.ambulance_required
-                  ? "✅ Required"
-                  : "❌ Not Required"}
-              </span>
-            </div>
+                <p>
+                  <strong>{result.agents.hospital.hospital_name}</strong>
+                </p>
 
-            <div className="info-row">
-              <strong>Estimated Response Time</strong>
-              <span>{result.estimated_response_time}</span>
-            </div>
+                <p>{result.agents.hospital.department}</p>
 
-            <h3>🏥 Hospital Departments</h3>
-
-            <ul>
-              {result.hospital_department?.map((dept, index) => (
-                <li key={index}>{dept}</li>
-              ))}
-            </ul>
-
-            <h3>🩹 First Aid Steps</h3>
-
-            <ul>
-              {result.first_aid?.map((item, index) => (
-                <li key={index}>{item}</li>
-              ))}
-            </ul>
-
-            <h3>🚑 Recommended Action</h3>
-
-            <p>{result.recommended_action}</p>
-
-            <h3>💡 Reason</h3>
-
-            <p>{result.reason}</p>
+                <p>{result.agents.hospital.phone}</p>
+              </div>
+            )}
           </div>
-        )}
+        </div>
+      )}
 
-        <div className="result-card">
-          <h2>📜 Emergency History</h2>
+      <h2 style={{ marginTop: "40px" }}>Emergency History</h2>
 
-          {history.length === 0 ? (
-            <p>No emergency history found.</p>
-          ) : (
-            <table className="history-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Emergency</th>
-                  <th>Priority</th>
-                  <th>Confidence</th>
-                  <th>Ambulance</th>
-                </tr>
-              </thead>
+      <table className="history-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Type</th>
+            <th>Priority</th>
+            <th>Confidence</th>
+          </tr>
+        </thead>
 
-              <tbody>
-                {history.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.id}</td>
-                    <td>{item.emergency_type}</td>
-                    <td>{item.priority}</td>
-                    <td>{item.confidence}</td>
-                    <td>
-                      {item.ambulance_required ? "✅ Yes" : "❌ No"}
-                    </td>
-                  </tr>
+        <tbody>
+          {filteredHistory.map((item) => (
+            <tr key={item.id}>
+              <td>{item.id}</td>
+              <td>{item.emergency_type}</td>
+              <td>{item.priority}</td>
+              <td>{item.confidence}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h2 style={{ marginTop: "40px" }}>Analytics</h2>
+
+      <div className="charts">
+        <div className="chart-card">
+          <h3>Priority Distribution</h3>
+
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={priorityData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="value" fill="#2563eb" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="chart-card">
+          <h3>Emergency Types</h3>
+
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={emergencyTypeData}
+                dataKey="value"
+                nameKey="name"
+                outerRadius={100}
+                label
+              >
+                {emergencyTypeData.map((entry, index) => (
+                  <Cell
+                    key={index}
+                    fill={COLORS[index % COLORS.length]}
+                  />
                 ))}
-              </tbody>
-            </table>
-          )}
+              </Pie>
+
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
   );
 }
-
-export default App;

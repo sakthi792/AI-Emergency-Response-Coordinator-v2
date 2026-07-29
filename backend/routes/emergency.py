@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from agents.coordinator import analyze_emergency
-from agents.hospital_agent import recommend_hospital
+from agents.hospital_agent import hospital_agent
 from services.database_service import get_all_emergencies
 
 router = APIRouter()
@@ -11,7 +11,7 @@ def analyze(emergency: str):
 
 @router.get("/hospital")
 def hospital(emergency: str):
-    return recommend_hospital(emergency)
+    return hospital_agent(emergency)
 
 @router.get("/history")
 def history():

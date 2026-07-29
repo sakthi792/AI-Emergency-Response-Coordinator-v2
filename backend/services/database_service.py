@@ -30,7 +30,20 @@ def get_all_emergencies():
     db: Session = SessionLocal()
 
     try:
-        return db.query(Emergency).order_by(Emergency.id.desc()).all()
+        emergencies = db.query(Emergency).order_by(Emergency.id.desc()).all()
+
+        return [
+            {
+                "id": e.id,
+                "emergency_type": e.emergency_type,
+                "priority": e.priority,
+                "confidence": e.confidence,
+                "summary": e.summary,
+                "ambulance_required": e.ambulance_required,
+                "recommended_action": e.recommended_action
+            }
+            for e in emergencies
+        ]
 
     finally:
         db.close()
