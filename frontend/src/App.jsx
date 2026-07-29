@@ -1,10 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 
 function App() {
   const [emergency, setEmergency] = useState("");
   const [result, setResult] = useState(null);
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const loadHistory = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/history");
+      const data = await response.json();
+      setHistory(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
 
   const analyzeEmergency = async () => {
     if (!emergency.trim()) {
@@ -19,15 +34,13 @@ function App() {
         `http://127.0.0.1:8000/analyze?emergency=${encodeURIComponent(emergency)}`
       );
 
-      console.log("Response Status:", response.status);
-
       const data = await response.json();
 
-      console.log("Response Data:", data);
-
       setResult(data);
+
+      loadHistory();
     } catch (error) {
-      console.error("Frontend Error:", error);
+      console.error(error);
 
       setResult({
         error: "Failed to connect to backend.",
@@ -132,6 +145,40 @@ function App() {
             <p>{result.reason}</p>
           </div>
         )}
+
+        <div className="result-card">
+          <h2>📜 Emergency History</h2>
+
+          {history.length === 0 ? (
+            <p>No emergency history found.</p>
+          ) : (
+            <table className="history-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Emergency</th>
+                  <th>Priority</th>
+                  <th>Confidence</th>
+                  <th>Ambulance</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {history.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.id}</td>
+                    <td>{item.emergency_type}</td>
+                    <td>{item.priority}</td>
+                    <td>{item.confidence}</td>
+                    <td>
+                      {item.ambulance_required ? "✅ Yes" : "❌ No"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
     </div>
   );

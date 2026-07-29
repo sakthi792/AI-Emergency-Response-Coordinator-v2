@@ -4,7 +4,6 @@ from pathlib import Path
 from groq import Groq
 from dotenv import load_dotenv
 
-# Load backend/.env
 dotenv_path = Path(__file__).resolve().parent.parent / ".env"
 
 print("Using .env:", dotenv_path)

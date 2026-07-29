@@ -1,18 +1,15 @@
 import os
 import json
 from pathlib import Path
+
 from groq import Groq
 from dotenv import load_dotenv
 
-# Load backend/.env
+from services.database_service import save_emergency
+
 dotenv_path = Path(__file__).resolve().parent.parent / ".env"
 
-print("Using .env:", dotenv_path)
-print("Exists:", dotenv_path.exists())
-
 load_dotenv(dotenv_path=dotenv_path, override=True)
-
-print("Groq Key:", os.getenv("GROQ_API_KEY"))
 
 api_key = os.getenv("GROQ_API_KEY")
 
@@ -23,8 +20,6 @@ client = Groq(api_key=api_key)
 
 
 def analyze_emergency(emergency: str):
-
-    print("1. Function started")
 
     prompt = f"""
 You are an expert Emergency Response Coordinator AI.
@@ -50,8 +45,6 @@ Return ONLY valid JSON.
 }}
 """
 
-    print("2. Prompt created")
-
     try:
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
@@ -64,8 +57,6 @@ Return ONLY valid JSON.
             temperature=0.2
         )
 
-        print("3. Response received")
-
         text = response.choices[0].message.content.strip()
 
         if text.startswith("```json"):
@@ -73,7 +64,16 @@ Return ONLY valid JSON.
         elif text.startswith("```"):
             text = text.replace("```", "").strip()
 
-        return json.loads(text)
+        result = json.loads(text)
+
+        print("Saving to database...")
+
+        save_emergency(result)
+
+        print("Saved successfully!")
+
+        return result
 
     except Exception as e:
+        print("Error:", e)
         return {"error": str(e)}
