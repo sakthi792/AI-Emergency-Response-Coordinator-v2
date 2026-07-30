@@ -1,5 +1,6 @@
 import os
 import json
+from datetime import datetime
 from pathlib import Path
 
 from groq import Groq
@@ -73,6 +74,15 @@ Return ONLY valid JSON.
 
         result = json.loads(text)
 
+        priority = str(result.get("priority", "")).capitalize()
+
+        allowed = ["Low", "Medium", "High", "Critical"]
+
+        if priority not in allowed:
+            priority = "Medium"
+
+        result["priority"] = priority
+
         location = extract_location(emergency)
         result["location"] = location
 
@@ -102,6 +112,8 @@ Return ONLY valid JSON.
 
         result["agents"] = agents_result
 
+        result["timestamp"] = datetime.now().isoformat()
+
         print("Saving to database...")
 
         save_emergency(result)
@@ -113,5 +125,7 @@ Return ONLY valid JSON.
     except Exception as e:
         print("Error:", e)
         return {
+            "success": False,
+            "message": "Emergency analysis failed.",
             "error": str(e)
         }

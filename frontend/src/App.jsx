@@ -14,8 +14,24 @@ import {
 
 import { useEffect, useState } from "react";
 import "./App.css";
+import MapView from "./components/MapView";
 
 export default function App() {
+  const getPriorityColor = (priority) => {
+    switch (priority?.toLowerCase()) {
+      case "critical":
+        return "#dc2626";
+      case "high":
+        return "#ea580c";
+      case "medium":
+        return "#eab308";
+      case "low":
+        return "#16a34a";
+      default:
+        return "#2563eb";
+    }
+  };
+
   const [emergency, setEmergency] = useState("");
   const [result, setResult] = useState(null);
   const [history, setHistory] = useState([]);
@@ -44,8 +60,10 @@ export default function App() {
   const typeData = {};
 
   history.forEach((item) => {
-    typeData[item.emergency_type] =
-      (typeData[item.emergency_type] || 0) + 1;
+    if (item.emergency_type) {
+      typeData[item.emergency_type] =
+        (typeData[item.emergency_type] || 0) + 1;
+    }
   });
 
   const emergencyTypeData = Object.keys(typeData).map((key) => ({
@@ -53,20 +71,21 @@ export default function App() {
     value: typeData[key]
   }));
 
-const filteredHistory = history.filter((item) =>
-  item.emergency_type.toLowerCase().includes(search.toLowerCase()) ||
-  item.priority.toLowerCase().includes(search.toLowerCase()) ||
-  item.summary.toLowerCase().includes(search.toLowerCase())
-);
+  const filteredHistory = history.filter(
+    (item) =>
+      item.emergency_type?.toLowerCase().includes(search.toLowerCase()) ||
+      item.priority?.toLowerCase().includes(search.toLowerCase()) ||
+      item.summary?.toLowerCase().includes(search.toLowerCase())
+  );
 
-const COLORS = [
-  "#ef4444",
-  "#f59e0b",
-  "#10b981",
-  "#3b82f6",
-  "#8b5cf6",
-  "#ec4899"
-];
+  const COLORS = [
+    "#ef4444",
+    "#f59e0b",
+    "#10b981",
+    "#3b82f6",
+    "#8b5cf6",
+    "#ec4899"
+  ];
 
   async function loadHistory() {
     const response = await fetch("http://127.0.0.1:8000/history");
@@ -76,7 +95,9 @@ const COLORS = [
 
   async function analyze() {
     const response = await fetch(
-      `http://127.0.0.1:8000/analyze?emergency=${encodeURIComponent(emergency)}`
+      `http://127.0.0.1:8000/analyze?emergency=${encodeURIComponent(
+        emergency
+      )}`
     );
 
     const data = await response.json();
@@ -132,7 +153,15 @@ const COLORS = [
           <div className="grid">
             <div className="info-box">
               <h3>Priority</h3>
-              <p>{result.priority}</p>
+              <p
+                style={{
+                  color: getPriorityColor(result.priority),
+                  fontWeight: "bold",
+                  fontSize: "20px"
+                }}
+              >
+                {result.priority}
+              </p>
             </div>
 
             <div className="info-box">
@@ -142,11 +171,17 @@ const COLORS = [
 
             <div className="info-box">
               <h3>Location</h3>
-              <p>{result.location.city}</p>
+              <p>{result.location?.city || "Unknown"}</p>
             </div>
 
             <div className="info-box">
               <h3>Confidence</h3>
+              <div className="progress-bar">
+                <div
+                  className="progress-fill"
+                  style={{ width: `${result.confidence}%` }}
+                ></div>
+              </div>
               <p>{result.confidence}%</p>
             </div>
 
@@ -159,28 +194,28 @@ const COLORS = [
           <h2 style={{ marginTop: "30px" }}>Emergency Services</h2>
 
           <div className="services">
-            {result.agents.ambulance && (
+            {result.agents?.ambulance && (
               <div className="service-card">
                 <h3>🚑 Ambulance</h3>
                 <p>{result.agents.ambulance.status}</p>
               </div>
             )}
 
-            {result.agents.police && (
+            {result.agents?.police && (
               <div className="service-card">
                 <h3>🚓 Police</h3>
                 <p>{result.agents.police.status}</p>
               </div>
             )}
 
-            {result.agents.fire && (
+            {result.agents?.fire && (
               <div className="service-card">
                 <h3>🚒 Fire</h3>
                 <p>{result.agents.fire.status}</p>
               </div>
             )}
 
-            {result.agents.hospital && (
+            {result.agents?.hospital && (
               <div className="service-card">
                 <h3>🏥 Hospital</h3>
 
@@ -188,16 +223,27 @@ const COLORS = [
                   <strong>{result.agents.hospital.hospital_name}</strong>
                 </p>
 
-                <p>{result.agents.hospital.department}</p>
+                <p>{result.agents?.hospital?.department}</p>
 
-                <p>{result.agents.hospital.phone}</p>
+                <p>{result.agents?.hospital?.phone}</p>
               </div>
             )}
           </div>
+
+          <h2 style={{ marginTop: "30px" }}>Hospital Location</h2>
+          <MapView />
         </div>
       )}
 
       <h2 style={{ marginTop: "40px" }}>Emergency History</h2>
+
+      <input
+        type="text"
+        placeholder="🔍 Search by emergency type, priority, or summary..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="search-box"
+      />
 
       <table className="history-table">
         <thead>
