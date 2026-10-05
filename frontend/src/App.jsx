@@ -195,12 +195,33 @@ export default function App() {
 
           <div className="services">
             {result.agents?.ambulance && (
-              <div className="service-card">
-                <h3>🚑 Ambulance</h3>
-                <p>{result.agents.ambulance.status}</p>
-              </div>
-            )}
+    <div className="service-card">
+        <h3>🚑 Ambulance</h3>
 
+        <p>
+            <strong>
+                {result.agents.ambulance.ambulance_required
+                    ? "Ambulance Required"
+                    : "Ambulance Not Required"}
+            </strong>
+        </p>
+
+        <p>
+            <strong>Priority:</strong>{" "}
+            {result.agents.ambulance.priority}
+        </p>
+
+        <p>
+            <strong>Reason:</strong>{" "}
+            {result.agents.ambulance.reason}
+        </p>
+
+        <p>
+            <strong>Response Time:</strong>{" "}
+            {result.agents.ambulance.response_time}
+        </p>
+    </div>
+)}
             {result.agents?.police && (
               <div className="service-card">
                 <h3>🚓 Police</h3>

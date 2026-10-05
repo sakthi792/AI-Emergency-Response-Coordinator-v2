@@ -10,7 +10,6 @@ load_dotenv(dotenv_path=dotenv_path)
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-
 def ambulance_agent(emergency: str):
 
     prompt = f"""
@@ -32,7 +31,7 @@ Return ONLY JSON.
 """
 
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2,
     )
