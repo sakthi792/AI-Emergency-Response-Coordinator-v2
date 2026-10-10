@@ -15,7 +15,7 @@ import {
 import { useEffect, useState } from "react";
 import "./App.css";
 import MapView from "./components/MapView";
-
+import WeatherAlerts from "./components/WeatherAlerts";
 export default function App() {
   const getPriorityColor = (priority) => {
     switch (priority?.toLowerCase()) {
@@ -114,6 +114,7 @@ export default function App() {
   return (
     <div className="container">
       <h1>🚨 AI Emergency Response Coordinator</h1>
+      <WeatherAlerts />
 
       <textarea
         rows="5"
